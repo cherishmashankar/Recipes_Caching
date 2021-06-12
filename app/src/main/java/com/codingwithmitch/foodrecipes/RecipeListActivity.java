@@ -39,6 +39,7 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
         initRecyclerView();
         initSearchView();
         setSupportActionBar((Toolbar)findViewById(R.id.toolbar));
+        subscribeObservers();
     }
 
 
@@ -60,6 +61,7 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
                                 Log.e(TAG, "onChanged: Recipe is displayed" );
                                 break;
                             case CATEGORIES:
+                                Log.e(TAG, "onChanged: Categories");
                                 displayCategory();
                                 break;
 
@@ -70,6 +72,7 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
     }
 
     private void displayCategory() {
+        mAdapter.displaySearchCategories();
 
     }
 
