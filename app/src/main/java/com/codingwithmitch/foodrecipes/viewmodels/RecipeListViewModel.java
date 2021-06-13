@@ -38,6 +38,8 @@ public class RecipeListViewModel extends AndroidViewModel {
     private boolean isPerformingQuery;
     private int mPageNumber;
     private String mQuery;
+    private boolean cancelQuery;
+    private long requestStartTime;
 
     public int getPageNumber() {
         return mPageNumber;
@@ -72,41 +74,66 @@ public class RecipeListViewModel extends AndroidViewModel {
             mPageNumber = pageNumber;
             mQuery = query;
             isQueryExhausted = false;
-            executeSearch(query, pageNumber);
+            executeSearch();
         }
 
     }
 
-    private void executeSearch(String query, int pageNumber){
+    public void searchNextPage(){
+        if(!isQueryExhausted && !isPerformingQuery){}
+        mPageNumber++;
+        executeSearch();
+
+    }
+    public void setViewStateCategoryState(){
+        viewState.setValue(ViewState.CATEGORIES);
+    }
+
+    private void executeSearch(){
+        requestStartTime = System.currentTimeMillis();
+        cancelQuery = false;
         isPerformingQuery = true;
         viewState.setValue(ViewState.RECIPE);
-        final LiveData<Resource<List<Recipe>>> repositorySource = recipeRepository.searchRecipesApi(query,pageNumber);
+        final LiveData<Resource<List<Recipe>>> repositorySource = recipeRepository.searchRecipesApi(mQuery,mPageNumber);
         recipes.addSource(repositorySource, new Observer<Resource<List<Recipe>>>() {
             @Override
             public void onChanged(@Nullable Resource<List<Recipe>> listResource) {
-                if(listResource != null){
-                    recipes.setValue(listResource);
-                    if(listResource.status == Resource.Status.SUCCESS){
-                        isPerformingQuery = false;
-                        if(listResource.data != null && listResource.data.size() == 0){
-                            Log.e(TAG, "onChanged: Query is exhausted...." );
-                            recipes.setValue(new Resource<List<Recipe>>(Resource.Status.ERROR,listResource.data, QUERY_EXHAUSTED));
-                        }
-                        recipes.removeSource(repositorySource);
-                    }else if(listResource.status == Resource.Status.ERROR){
-                        isPerformingQuery = false;
-                        recipes.removeSource(repositorySource);
-                    }
+                if(!cancelQuery) {
+                    if (listResource != null) {
+                        recipes.setValue(listResource);
+                        if (!cancelQuery)
+                            if (listResource.status == Resource.Status.SUCCESS) {
+                                Log.e(TAG, "onChanged: Request Time---------------" +  (System.currentTimeMillis() - requestStartTime)/ 1000 + "Seconds");
+                                isPerformingQuery = false;
+                                if (listResource.data != null && listResource.data.size() == 0) {
+                                    Log.e(TAG, "onChanged: Query is exhausted....");
+                                    recipes.setValue(new Resource<List<Recipe>>(Resource.Status.ERROR, listResource.data, QUERY_EXHAUSTED));
+                                }
+                                recipes.removeSource(repositorySource);
+                            } else if (listResource.status == Resource.Status.ERROR) {
+                                isPerformingQuery = false;
+                                recipes.removeSource(repositorySource);
+                            }
 
-                }else{
-                    recipes.removeSource(repositorySource);//avoid getting duplicate data
+                    } else {
+                        recipes.removeSource(repositorySource);//avoid getting duplicate data
+                    }
+                }else {
+                    recipes.removeSource(repositorySource);
                 }
 
-
-                recipes.setValue(listResource);
             }
+
         });
 
+    }
+
+    public void cancelSearchRequest(){
+        if(isPerformingQuery){
+            cancelQuery = true;
+            mPageNumber = 1;
+            isPerformingQuery = false;
+        }
     }
 
 

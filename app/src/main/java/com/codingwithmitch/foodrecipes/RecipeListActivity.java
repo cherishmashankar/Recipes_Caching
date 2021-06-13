@@ -4,15 +4,22 @@ import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.RequestManager;
+import com.bumptech.glide.integration.recyclerview.RecyclerViewPreloader;
+import com.bumptech.glide.request.RequestOptions;
+import com.bumptech.glide.util.ViewPreloadSizeProvider;
 import com.codingwithmitch.foodrecipes.adapters.OnRecipeListener;
 import com.codingwithmitch.foodrecipes.adapters.RecipeRecyclerAdapter;
 import com.codingwithmitch.foodrecipes.models.Recipe;
@@ -50,13 +57,43 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
         subscribeObservers();
     }
 
+    private RequestManager initGlide(){
+        RequestOptions options = new RequestOptions()
+                .placeholder(R.drawable.white_background)
+                .error(R.drawable.white_background);
+
+        return  Glide.with(this)
+                .setDefaultRequestOptions(options);
+
+
+    }
+
 
     private void initRecyclerView(){
-        mAdapter = new RecipeRecyclerAdapter(this);
+        ViewPreloadSizeProvider<String> viewPreloader = new ViewPreloadSizeProvider<String>();
+        mAdapter = new RecipeRecyclerAdapter(this, initGlide(), viewPreloader);
         VerticalSpacingItemDecorator itemDecorator = new VerticalSpacingItemDecorator(30);
         mRecyclerView.addItemDecoration(itemDecorator);
-        mRecyclerView.setAdapter(mAdapter);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        RecyclerViewPreloader<String> recyclerViewPreloader = new RecyclerViewPreloader<String>(
+                Glide.with(this),
+                mAdapter,
+                viewPreloader,
+                30
+        );
+        mRecyclerView.addOnScrollListener(recyclerViewPreloader);
+
+        mRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                if(!mRecyclerView.canScrollVertically(1)  && mRecipeListViewModel.getViewState().getValue() == RecipeListViewModel.ViewState.RECIPE){
+                  mRecipeListViewModel.searchNextPage();
+                }
+            }
+        });
+
+        mRecyclerView.setAdapter(mAdapter);
     }
 
     private void subscribeObservers(){
@@ -117,7 +154,9 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
         });
     }
     private void searchRecipesApi(String query){
+        mRecyclerView.smoothScrollToPosition(0);
         mRecipeListViewModel.searchRecipesApi(query, 1);
+        mSearchView.clearFocus();
     }
 
     private void displayCategory() {
@@ -153,6 +192,15 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
         
     }
 
+    @Override
+    public void onBackPressed() {
+        if(mRecipeListViewModel.getViewState().getValue() == RecipeListViewModel.ViewState.CATEGORIES) {
+            super.onBackPressed();
+        }else {
+            mRecipeListViewModel.cancelSearchRequest();
+            mRecipeListViewModel.setViewStateCategoryState();
+        }
+    }
 }
 
 
