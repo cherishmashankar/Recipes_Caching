@@ -10,7 +10,9 @@ public class Testing {
 
     public static void printRecipes(List<Recipe>list, String tag){
         for(Recipe recipe: list){
-            Log.d(tag, "onChanged: " + recipe.getTitle());
+            Log.e(tag, "onChanged: " + recipe.getTitle());
+
         }
+
     }
 }

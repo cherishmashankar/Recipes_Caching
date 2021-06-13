@@ -10,17 +10,25 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.widget.Toast;
 
 
 import com.codingwithmitch.foodrecipes.adapters.OnRecipeListener;
 import com.codingwithmitch.foodrecipes.adapters.RecipeRecyclerAdapter;
+import com.codingwithmitch.foodrecipes.models.Recipe;
+import com.codingwithmitch.foodrecipes.util.Resource;
+import com.codingwithmitch.foodrecipes.util.Testing;
 import com.codingwithmitch.foodrecipes.util.VerticalSpacingItemDecorator;
 import com.codingwithmitch.foodrecipes.viewmodels.RecipeListViewModel;
+
+import java.util.List;
 
 
 public class RecipeListActivity extends BaseActivity implements OnRecipeListener {
 
     private static final String TAG = "RecipeListActivity";
+    private static final String QUERY_EXHAUSTED = "No more results.";
+
 
     private RecipeListViewModel mRecipeListViewModel;
     private RecyclerView mRecyclerView;
@@ -52,6 +60,44 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
     }
 
     private void subscribeObservers(){
+        mRecipeListViewModel.getRecipes().observe(this, new Observer<Resource<List<Recipe>>>() {
+            @Override
+            public void onChanged(@Nullable Resource<List<Recipe>> listResource) {
+                Log.e(TAG, "onChanged: Status " + listResource.status);
+                if(listResource.data != null){
+                    switch (listResource.status){
+                        case LOADING:
+                            if(mRecipeListViewModel.getPageNumber() > 1){
+                                mAdapter.displayLoading();
+                            }else{
+                                mAdapter.displayOnlyLoading();
+                            }
+                            break;
+                        case ERROR:
+                            Log.e(TAG, "onChanged: cannot refresh the cache." );
+                            Log.e(TAG, "onChanged: ERROR message: " + listResource.message );
+                            Log.e(TAG, "onChanged: status: ERROR, #recipes: " + listResource.data.size());
+
+                            mAdapter.hideLoading();
+                            mAdapter.setRecipes(listResource.data);
+                            Toast.makeText(RecipeListActivity.this, listResource.message, Toast.LENGTH_SHORT).show();
+
+                            if(listResource.message.equals(QUERY_EXHAUSTED)){
+                                mAdapter.setQueryExhausted();
+                            }
+                            break;
+
+                        case SUCCESS:
+                            Log.d(TAG, "onChanged: cache has been refreshed.");
+                            Log.d(TAG, "onChanged: status: SUCCESS, #Recipes: " + listResource.data.size());
+                            mAdapter.hideLoading();
+                            mAdapter.setRecipes(listResource.data);
+                            break;
+                    }
+                }
+
+            }
+        });
         mRecipeListViewModel.getViewState().observe(this, new Observer<RecipeListViewModel.ViewState>() {
             @Override
             public void onChanged(@Nullable RecipeListViewModel.ViewState viewState) {
@@ -70,6 +116,9 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
             }
         });
     }
+    private void searchRecipesApi(String query){
+        mRecipeListViewModel.searchRecipesApi(query, 1);
+    }
 
     private void displayCategory() {
         mAdapter.displaySearchCategories();
@@ -80,9 +129,8 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
         mSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String s) {
-
-
-                return false;
+                searchRecipesApi(s);
+                  return false;
             }
 
             @Override
@@ -101,6 +149,7 @@ public class RecipeListActivity extends BaseActivity implements OnRecipeListener
 
     @Override
     public void onCategoryClick(String category) {
+        searchRecipesApi(category);
         
     }
 

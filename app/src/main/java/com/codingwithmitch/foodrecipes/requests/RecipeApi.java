@@ -1,5 +1,8 @@
 package com.codingwithmitch.foodrecipes.requests;
 
+import android.arch.lifecycle.LiveData;
+
+import com.codingwithmitch.foodrecipes.requests.responses.ApiResponse;
 import com.codingwithmitch.foodrecipes.requests.responses.RecipeResponse;
 import com.codingwithmitch.foodrecipes.requests.responses.RecipeSearchResponse;
 
@@ -13,14 +16,14 @@ public interface RecipeApi {
 
     // SEARCH
     @GET("api/v2/recipes")
-    Call<RecipeSearchResponse> searchRecipe(
+    LiveData<ApiResponse<RecipeSearchResponse>> searchRecipe(
             @Query("q") String query,
             @Query("page") String page
     );
 
     // GET RECIPE REQUEST Ex: https://recipesapi.herokuapp.com/api/get?rId=49795
     @GET("api/get")
-    Call<RecipeResponse> getRecipe(
+    LiveData<ApiResponse<RecipeResponse>> getRecipe(
             @Query("rId") String recipe_id
     );
 }

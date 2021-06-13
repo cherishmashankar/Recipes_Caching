@@ -42,12 +42,12 @@ public class Recipe implements Parcelable{
     @ColumnInfo(name = "timeStamp")
     private int timeStamp;
 
-    public Recipe(@NonNull String recipe_id, String title, String publisher, String image_url, float social_rank, String[] ingredients, String imageUrl, String id, int timeStamp) {
+    public Recipe(String recipe_id, String title, String publisher, String image_url, float socialUrl, String[] ingredients, String imageUrl, @NonNull String id, int timeStamp) {
         this.recipe_id = recipe_id;
         this.title = title;
         this.publisher = publisher;
         this.image_url = image_url;
-        this.socialUrl = social_rank;
+        this.socialUrl = socialUrl;
         this.ingredients = ingredients;
         this.imageUrl = imageUrl;
         this.id = id;
@@ -114,7 +114,7 @@ public class Recipe implements Parcelable{
         this.image_url = image_url;
     }
 
-    public float getSocial_rank() {
+    public float getSocialUrl() {
         return socialUrl;
     }
 
@@ -179,10 +179,11 @@ public class Recipe implements Parcelable{
                 ", title='" + title + '\'' +
                 ", publisher='" + publisher + '\'' +
                 ", image_url='" + image_url + '\'' +
-                ", social_rank=" + socialUrl +
+                ", socialUrl=" + socialUrl +
                 ", ingredients=" + Arrays.toString(ingredients) +
                 ", imageUrl='" + imageUrl + '\'' +
                 ", id='" + id + '\'' +
+                ", timeStamp=" + timeStamp +
                 '}';
     }
 }
