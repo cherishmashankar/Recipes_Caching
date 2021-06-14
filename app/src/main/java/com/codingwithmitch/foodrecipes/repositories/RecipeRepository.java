@@ -12,7 +12,9 @@ import com.codingwithmitch.foodrecipes.persistence.RecipeDao;
 import com.codingwithmitch.foodrecipes.persistence.RecipeDatabase;
 import com.codingwithmitch.foodrecipes.requests.ServiceGenerator;
 import com.codingwithmitch.foodrecipes.requests.responses.ApiResponse;
+import com.codingwithmitch.foodrecipes.requests.responses.RecipeResponse;
 import com.codingwithmitch.foodrecipes.requests.responses.RecipeSearchResponse;
+import com.codingwithmitch.foodrecipes.util.Constants;
 import com.codingwithmitch.foodrecipes.util.NetworkBoundResource;
 import com.codingwithmitch.foodrecipes.util.Resource;
 
@@ -81,5 +83,50 @@ public class RecipeRepository {
             }
         }.getAsLiveData();
 
+    }
+
+    public LiveData<Resource<Recipe>> searchRecipeApi(final String recipeId){
+        return new NetworkBoundResource<Recipe, RecipeResponse>(AppExecutors.getInstance()){
+
+            @Override
+            protected void saveCallResult(@NonNull RecipeResponse item) {
+                if(item.getRecipe() != null){
+                    item.getRecipe().setTimeStamp((int)(System.currentTimeMillis()/1000));
+                    item.getRecipe().setId(item.getRecipe().getRecipe_id());
+                 //   Log.e(TAG, "saveCallResult: ------------**************" + item.getRecipe().getId() + "   " +item.getRecipe().getRecipe_id() );
+                    recipeDao.insertRecipe(item.getRecipe());
+                }
+
+            }
+
+            @Override
+            protected boolean shouldFetch(@Nullable Recipe data) {
+                Log.d(TAG, "shouldFetch: recipe: " + data.toString());
+                int currentTime = (int)(System.currentTimeMillis() / 1000);
+                Log.d(TAG, "shouldFetch: current time: " + currentTime);
+                int lastRefresh = data.getTimeStamp();
+                Log.d(TAG, "shouldFetch: last refresh: " + lastRefresh);
+                Log.d(TAG, "shouldFetch: it's been " + ((currentTime - lastRefresh) / (60 * 60 * 24)) +
+                        " days since this recipe was refreshed. 30 days must elapse before refreshing. ");
+                if((currentTime - data.getTimeStamp()) >= Constants.RECIPE_REFRESH_TIME){
+                    Log.d(TAG, "shouldFetch: SHOULD REFRESH RECIPE?! " + true);
+                    return true;
+                }
+                Log.d(TAG, "shouldFetch: SHOULD REFRESH RECIPE?! " + false);
+                return false;
+            }
+
+            @NonNull
+            @Override
+            protected LiveData<Recipe> loadFromDb() {
+                return recipeDao.getRecipe(recipeId);
+            }
+
+            @NonNull
+            @Override
+            protected LiveData<ApiResponse<RecipeResponse>> createCall() {
+                return ServiceGenerator.getRecipeApi().getRecipe(recipeId);
+            }
+        }.getAsLiveData();
     }
 }
